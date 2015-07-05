@@ -35,6 +35,12 @@ return {
     },
     on_message: function(id, msg, k) {
         console.log("Shiny to client: ", msg);
+        if(_.isArray(msg)) {
+            // looks like shiny switched json libraries and now they're sending objects
+            // instead of pseudo-scalars
+            if(msg.length > 1) console.log('rcloud.shiny: whoops, more than one element?');
+            msg = msg[0];
+        };
         msg = msg.replace(/shared\//g,'shared.R/shiny/shared/');
         sockets_[0].onmessage({data:msg});
         k();
