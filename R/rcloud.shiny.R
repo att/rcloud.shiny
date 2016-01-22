@@ -1,70 +1,32 @@
-.renderPage <- function(ui) {
-  textConn <- textConnection(NULL, "w")
-  on.exit(close(textConn))
-  shiny:::renderPage(ui, textConn, FALSE)
-
-  shinyHtml <- gsub('"shared/', '"../../shared.R/shiny/shared/', paste(textConnectionValue(textConn), collapse="\n"), fixed=TRUE)
-
-  prefixList <- shiny:::.globals$resources
-
-  if(length(prefixList) > 0){
-    patternStr <- lapply(names(prefixList), function(pn) { paste('"', pn, '/', sep='') })
-    replacementStr <- lapply(prefixList, function(p) {
-        splitDirPath <- strsplit(p$directoryPath, "/+")[[1]]
-        paste('"../../shared.R/', splitDirPath[length(splitDirPath)-1], '/', sep="")
-    })
-    mapply(FUN= function(...) {
-         shinyHtml <<- gsub(...,x=shinyHtml)},
-         pattern=patternStr, replacement=replacementStr)
-  }
-
-  finalHtml <- gsub('shiny/shared/jquery.js', '../../disabled.js', shinyHtml, fixed=TRUE)
-  finalHtml <- gsub('shiny/shared/jquery.min.js', '../../disabled.js', finalHtml, fixed=TRUE)
-  finalHtml
-}
-
 rcloud.shinyApp <- function(ui, server, options) {
   require(rcloud.web)
   require(shiny)
 
-  appHandlers <- NULL
-  onMessageHandler <- NULL
-  onCloseHandler <- NULL
-
-  fakeWebSocket <- function(id) {
-    list(
-      send = function(msg) {
-        rcloud.shiny.caps$on_message(id, msg);
-      },
-      onMessage = function(h) {
-        onMessageHandler <<- h
-      },
-      onClose = function(h) {
-        onCloseHandler <<- h
-      })
+  blah.txt <- '/tmp/blah.txt'
+  blahg <- function(x, append = TRUE) {
+    cat(x, file=blah.txt, append = append, sep='\n')
   }
 
-  connect <- function(id) {
-    #rcloud.print("shiny connected")
-    fws <- fakeWebSocket(id)
-    appHandlers$ws(fws)
-  }
+  blahg('shinyApp called', FALSE)
 
-  receive <- function(id, msg) {
-    #rcloud.print(paste("shiny message ", msg))
-    onMessageHandler(FALSE, msg)
-  }
+  info <- rcloud.session.info()
+  port <- 8889
 
-  ocaps <- list(
-    connect = rcloud.support:::make.oc(connect),
-    send = rcloud.support:::make.oc(receive)
-  );
+  url = paste0('proxy.R/', info$user, '/', info$id, ':', port, '/index.html')
+  blahg(paste0('here is the url: ', url))
 
-  rcloud.shiny.caps$init(ocaps);
-  serverFuncSource <- function() {
-    server
-  }
-  appHandlers <- shiny:::createAppHandlers(NULL, serverFuncSource)
-  rcw.result(body = .renderPage(ui))
+  rcw.result(
+    run = function(...) {
+      blahg('start running')
+      app <- shinyApp(ui = ui, server = server)
+      res <- try(runApp(app, port = port, launch.browser = FALSE))
+      if (inherits(res, 'try-error')) {
+        blahg(paste0('failure: ', res))
+      } else {
+        blahg('success?  you tell me')
+      }
+    },
+    body = paste0('<meta http-equiv="refresh" content="2; url=', url, '" />')
+  )
 }
 
