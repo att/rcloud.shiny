@@ -10,9 +10,9 @@ rcloud.shinyApp <- function(ui, server, options) {
   blahg('shinyApp called', FALSE)
 
   info <- rcloud.session.info()
-  port <- 8889
+  port <- 8887
 
-  url = paste0('proxy.R/', info$user, '/', info$id, ':', port, '/index.html')
+  url = paste0('proxy.R/', info$user, '/', info$id, ':', port, '/')
   blahg(paste0('here is the url: ', url))
 
   rcw.result(
