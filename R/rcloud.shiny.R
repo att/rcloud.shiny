@@ -7,16 +7,16 @@
 
   prefixList <- shiny:::.globals$resources
 
-  if(length(prefixList) > 0){
-    patternStr <- lapply(names(prefixList), function(pn) { paste('"', pn, '/', sep='') })
-    replacementStr <- lapply(prefixList, function(p) {
-        splitDirPath <- strsplit(p$directoryPath, "/+")[[1]]
-        paste('"../../shared.R/', splitDirPath[length(splitDirPath)-1], '/', sep="")
-    })
-    mapply(FUN= function(...) {
-         shinyHtml <<- gsub(...,x=shinyHtml)},
-         pattern=patternStr, replacement=replacementStr)
-  }
+  ## if(length(prefixList) > 0){
+  ##   patternStr <- lapply(names(prefixList), function(pn) { paste('"', pn, '/', sep='') })
+  ##   replacementStr <- lapply(prefixList, function(p) {
+  ##      tttttttttttttttttttttttttt splitDirPath <- strsplit(p$directoryPath, "/+")[[1]]
+  ##       paste('"../../shared.R/', splitDirPath[length(splitDirPath)-1], '/', sep="")
+  ##   })
+  ##   mapply(FUN= function(...) {
+  ##        shinyHtml <<- gsub(...,x=shinyHtml)},
+  ##        pattern=patternStr, replacement=replacementStr)
+  ## }hyyygvvvvvvttttttttttttttttttt
 
   finalHtml <- gsub('shiny/shared/jquery.js', '../../disabled.js', shinyHtml, fixed=TRUE)
   finalHtml <- gsub('shiny/shared/jquery.min.js', '../../disabled.js', finalHtml, fixed=TRUE)
@@ -57,7 +57,8 @@ rcloud.shinyApp <- function(ui, server, options) {
 
   ocaps <- list(
     connect = rcloud.support:::make.oc(connect),
-    send = rcloud.support:::make.oc(receive)
+                send = rcloud.support:::make.oc(receive),
+                service_app = rcloud.support:::make.oc(shiny:::serviceApp)
   );
 
   rcloud.shiny.caps$init(ocaps);
