@@ -25,15 +25,20 @@ function fakeWebSocket() {
 
 return {
     init: function(ocaps, k) {
+        console.log('shiny js init');
         ocaps_ = RCloud.promisify_paths(ocaps, [["connect"], ["send"], ["service_app"]]);
         window.Shiny = {
             createSocket: function() {
                 return fakeWebSocket();
             }
         };
+        $.ajaxPrefilter(function( options, originalOptions, jqXHR ) {
+            options.async = true;
+        });
+
 	window.setInterval(function() {
 	    ocaps_.service_appAsync();
-	}, 100);
+	}, 1);
         k();
     },
     on_message: function(id, msg, k) {
