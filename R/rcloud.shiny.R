@@ -88,9 +88,9 @@ rcloud.shinyApp <- function(ui, server, options) {
   app <- shiny:::shinyApp(ui = ui, server = server)
   host <- '0.0.0.0'
   port <- 8887
-  server <- shiny:::startApp(shiny:::as.shiny.appobj(app), port, host, FALSE)
+  webserver <- shiny:::startApp(shiny:::as.shiny.appobj(app), port, host, FALSE)
   ## on.exit({
-  ##   stopServer(server)
+  ##   stopServer(webserver)
   ## }, add = TRUE)
 
   rcloud.shiny.caps$init(ocaps);
