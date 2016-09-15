@@ -25,20 +25,15 @@ function fakeWebSocket() {
 
 return {
     init: function(ocaps, k) {
-        console.log('shiny js init');
+        console.log('shiny js parent init');
         ocaps_ = RCloud.promisify_paths(ocaps, [["connect"], ["send"], ["service_app"]]);
-        window.Shiny = {
-            createSocket: function() {
-                return fakeWebSocket();
-            }
-        };
-        $.ajaxPrefilter(function( options, originalOptions, jqXHR ) {
-            options.async = true;
-        });
 
-	window.setInterval(function() {
-	    ocaps_.service_appAsync();
-	}, 1);
+        window.rcloud.create_fake_shiny_websocket = function() {
+            return fakeWebSocket();
+        };
+        window.setInterval(function() {
+            ocaps_.service_appAsync();
+        }, 100);
         k();
     },
     on_message: function(id, msg, k) {
@@ -49,7 +44,7 @@ return {
             if(msg.length > 1) console.log('rcloud.shiny: whoops, more than one element?');
             msg = msg[0];
         };
-        msg = msg.replace(/shared\//g,'shared.R/shiny/shared/');
+        // [id] ?
         sockets_[0].onmessage({data:msg});
         k();
     }
