@@ -37,9 +37,10 @@ rcloud.shinyApp <- function(ui, server, options) {
 
   ocaps <- list(
     connect = rcloud.support:::make.oc(connect),
-    send = rcloud.support:::make.oc(receive),
-    service_app = rcloud.support:::make.oc(shiny:::serviceApp)
+    send = rcloud.support:::make.oc(receive)
   );
+
+  .GlobalEnv$.ocap.idle <- function() shiny:::serviceApp()
 
   app <- override.shinyApp(ui = ui, server = server)
   host <- '0.0.0.0'

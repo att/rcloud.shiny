@@ -31,9 +31,6 @@ return {
         window.rcloud.create_fake_shiny_websocket = function() {
             return fakeWebSocket();
         };
-        window.setInterval(function() {
-            ocaps_.service_appAsync();
-        }, 100);
         k();
     },
     on_message: function(id, msg, k) {
