@@ -42,6 +42,8 @@ rcloud.shinyApp <- function(ui, server, options) {
 
   .GlobalEnv$.ocap.idle <- function() shiny:::serviceApp()
 
+  shiny:::workerId("")
+
   app <- override.shinyApp(ui = ui, server = server)
   host <- '0.0.0.0'
   port <- 8887
