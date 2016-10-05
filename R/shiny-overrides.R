@@ -171,12 +171,12 @@ override.runApp <- function(appDir=getwd(),
           }
         }
       }
-
       # Test port to see if we can use it
-      tmp <- try(shiny:::startServer(host, port, list()), silent=TRUE)
+      tmp <- try(httpuv:::startServer(host, port, list()), silent=TRUE)
       if (!inherits(tmp, 'try-error')) {
-        stopServer(tmp)
-        shiny:::.globals$lastPort <- port
+        httpuv:::stopServer(tmp)
+        # RCloud can't touch this
+        ## shiny:::.globals$lastPort <- port
         break
       }
     }
@@ -249,6 +249,7 @@ override.runApp <- function(appDir=getwd(),
   ##   .globals$retval$value
   ## else
   ##   invisible(.globals$retval$value)
+  list(port = port)
 }
 
 override.uiHttpHandler <- function(ui, uiPattern = "^/$") {
