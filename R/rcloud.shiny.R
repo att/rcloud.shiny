@@ -44,19 +44,15 @@ rcloud.shinyApp <- function(ui, server, options) {
 
   shiny:::workerId("")
 
+  appHandlers <- shiny:::createAppHandlers(NULL, serverFuncSource)
   app <- override.shinyApp(ui = ui, server = server)
-  host <- '0.0.0.0'
-  port <- 8887
-  webserver <- shiny:::startApp(shiny:::as.shiny.appobj(app), port, host, FALSE)
-  ## on.exit({
-  ##   stopServer(webserver)
-  ## }, add = TRUE)
+
+  override.runApp(app)
 
   rcloud.shiny.caps$init(ocaps);
   serverFuncSource <- function() {
     server
   }
-  appHandlers <- shiny:::createAppHandlers(NULL, serverFuncSource)
   rcw.result(body = paste0('<iframe src="', rcloud.proxy.url(8887), '" frameBorder="0" style="position: absolute; left: 0px; top: 0px; width: 100%; height: 100%;"></iframe>'))
 }
 
