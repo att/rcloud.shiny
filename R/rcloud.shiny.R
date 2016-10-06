@@ -42,8 +42,6 @@ rcloud.shinyApp <- function(ui, server, options) {
 
   .GlobalEnv$.ocap.idle <- function() shiny:::serviceApp()
 
-  shiny:::workerId("")
-
   appHandlers <- shiny:::createAppHandlers(NULL, serverFuncSource)
   app <- override.shinyApp(ui = ui, server = server)
 
