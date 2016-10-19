@@ -26,7 +26,7 @@ function fakeWebSocket() {
 return {
     init: function(ocaps, k) {
         console.log('shiny js parent init');
-        ocaps_ = RCloud.promisify_paths(ocaps, [["connect"], ["send"], ["service_app"]]);
+        ocaps_ = RCloud.promisify_paths(ocaps, [["connect"], ["send"]]);
 
         window.rcloud.create_fake_shiny_websocket = function() {
             return fakeWebSocket();
