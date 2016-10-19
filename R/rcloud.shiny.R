@@ -47,7 +47,8 @@ rcloud.shinyApp <- function(ui, server, options) {
   appHandlers <- shiny:::createAppHandlers(NULL, serverFuncSource)
   app <- override.shinyApp(ui = ui, server = server)
 
-  appInfo <- override.runApp(app, host=rcloud.get.conf.value('host'))
+  host <- rcloud.get.conf.value('host')
+  appInfo <- override.runApp(app, host=nsl(host))
 
   rcloud.shiny.caps$init(ocaps);
   serverFuncSource <- function() {
