@@ -40,12 +40,14 @@ rcloud.shinyApp <- function(ui, server, options) {
     send = rcloud.support:::make.oc(receive)
   );
 
-  .GlobalEnv$.ocap.idle <- function() shiny:::serviceApp()
+  .GlobalEnv$.ocap.idle <- function() {
+    shiny:::serviceApp()
+  }
 
   appHandlers <- shiny:::createAppHandlers(NULL, serverFuncSource)
   app <- override.shinyApp(ui = ui, server = server)
 
-  appInfo <- override.runApp(app)
+  appInfo <- override.runApp(app, host=rcloud.get.conf.value('host'))
 
   rcloud.shiny.caps$init(ocaps);
   serverFuncSource <- function() {
