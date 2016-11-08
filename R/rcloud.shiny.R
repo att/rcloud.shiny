@@ -1,31 +1,11 @@
-.renderPage <- function(ui) {
-  textConn <- textConnection(NULL, "w")
-  on.exit(close(textConn))
-  shiny:::renderPage(ui, textConn, FALSE)
-
-  shinyHtml <- gsub('"shared/', '"../../shared.R/shiny/shared/', paste(textConnectionValue(textConn), collapse="\n"), fixed=TRUE)
-
-  prefixList <- shiny:::.globals$resources
-
-  if(length(prefixList) > 0){
-    patternStr <- lapply(names(prefixList), function(pn) { paste('"', pn, '/', sep='') })
-    replacementStr <- lapply(prefixList, function(p) {
-        splitDirPath <- strsplit(p$directoryPath, "/+")[[1]]
-        paste('"../../shared.R/', splitDirPath[length(splitDirPath)-1], '/', sep="")
-    })
-    mapply(FUN= function(...) {
-         shinyHtml <<- gsub(...,x=shinyHtml)},
-         pattern=patternStr, replacement=replacementStr)
-  }
-
-  finalHtml <- gsub('shiny/shared/jquery.js', '../../disabled.js', shinyHtml, fixed=TRUE)
-  finalHtml <- gsub('shiny/shared/jquery.min.js', '../../disabled.js', finalHtml, fixed=TRUE)
-  finalHtml
+rcloud.proxy.url <- function(port) {
+  info <- rcloud.session.info()
+  paste0('proxy.R/', info$user, '/', info$id, ':', port, '/')
 }
 
 rcloud.shinyApp <- function(ui, server, options) {
-  require(rcloud.web)
-  require(shiny)
+  library(rcloud.web)
+  library(shiny)
 
   appHandlers <- NULL
   onMessageHandler <- NULL
@@ -60,11 +40,20 @@ rcloud.shinyApp <- function(ui, server, options) {
     send = rcloud.support:::make.oc(receive)
   );
 
+  .GlobalEnv$.ocap.idle <- function() {
+    shiny:::serviceApp()
+  }
+
+  appHandlers <- shiny:::createAppHandlers(NULL, serverFuncSource)
+  app <- override.shinyApp(ui = ui, server = server)
+
+  host <- rcloud.get.conf.value('host')
+  appInfo <- override.runApp(app, host=nsl(host))
+
   rcloud.shiny.caps$init(ocaps);
   serverFuncSource <- function() {
     server
   }
-  appHandlers <- shiny:::createAppHandlers(NULL, serverFuncSource)
-  rcw.result(body = .renderPage(ui))
+  rcw.result(body = paste0('<iframe src="', rcloud.proxy.url(appInfo$port), '" frameBorder="0" style="position: absolute; left: 0px; top: 0px; width: 100%; height: 100%;"></iframe>'))
 }
 

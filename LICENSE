@@ -1,0 +1,3 @@
+The original rcloud.shiny source code is licensed under the MIT License, however for the purpose of
+overriding a few functions, it currently contains a few functions copied from the shiny package (see
+R/shiny-overrides.R), making the combined package GPL-3.
