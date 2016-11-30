@@ -1,6 +1,6 @@
-rcloud.proxy.url <- function(port) {
+rcloud.proxy.url <- function(port, search, hash) {
   info <- rcloud.session.info()
-  paste0('proxy.R/', info$user, '/', info$id, ':', port, '/')
+  paste0('proxy.R/', info$user, '/', info$id, ':', port, '/', search, hash)
 }
 
 rcloud.shinyApp <- function(ui, server, options) {
@@ -50,10 +50,10 @@ rcloud.shinyApp <- function(ui, server, options) {
   host <- rcloud.get.conf.value('host')
   appInfo <- override.runApp(app, host=nsl(host))
 
-  rcloud.shiny.caps$init(ocaps);
+  loc <- rcloud.shiny.caps$init(ocaps);
   serverFuncSource <- function() {
     server
   }
-  rcw.result(body = paste0('<iframe src="', rcloud.proxy.url(appInfo$port), '" frameBorder="0" style="position: absolute; left: 0px; top: 0px; width: 100%; height: 100%;"></iframe>'))
+  rcw.result(body = paste0('<iframe src="', rcloud.proxy.url(appInfo$port, loc$search, loc$hash), '" frameBorder="0" style="position: absolute; left: 0px; top: 0px; width: 100%; height: 100%;"></iframe>'))
 }
 

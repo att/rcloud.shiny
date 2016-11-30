@@ -31,7 +31,7 @@ return {
         window.rcloud.create_fake_shiny_websocket = function() {
             return fakeWebSocket();
         };
-        k();
+        k({hash: window.location.hash, search: window.location.search});
     },
     on_message: function(id, msg, k) {
         if(_.isArray(msg)) {
