@@ -1,3 +1,10 @@
+## rcloud.shiny 0.4.1
+
+### Bug Fixes
+
+* Build proxy.R/.../ URL for `<iframe>` with search and hash duplicated from the parent window, so
+  that Shiny applications have access to them through `session$clientData` (#12)
+
 ## rcloud.shiny 0.4
 
 ### New Architecture
