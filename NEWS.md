@@ -1,3 +1,6 @@
+## rcloud.shiny 0.4.2
+* Show shiny title and shiny favicon
+
 ## rcloud.shiny 0.4.1
 
 ### Bug Fixes
