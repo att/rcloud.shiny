@@ -54,6 +54,6 @@ rcloud.shinyApp <- function(ui, server, options) {
   serverFuncSource <- function() {
     server
   }
-  rcw.result(body = paste0('<iframe src="', rcloud.proxy.url(appInfo$port, loc$search, loc$hash), '" frameBorder="0" style="position: absolute; left: 0px; top: 0px; width: 100%; height: 100%;"></iframe>'))
+  rcw.result(body = paste0('<iframe src="', rcloud.proxy.url(appInfo$port, loc$search, loc$hash), '" class="rcloud-shiny" frameBorder="0" style="position: absolute; left: 0px; top: 0px; width: 100%; height: 100%;"></iframe>'))
 }
 

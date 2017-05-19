@@ -2,6 +2,7 @@
 
 var sockets_ = [];
 var ocaps_ = null;
+var title_ = "RCloud";
 
 function fakeWebSocket() {
     var fws = {
@@ -31,6 +32,14 @@ return {
         window.rcloud.create_fake_shiny_websocket = function() {
             return fakeWebSocket();
         };
+
+        window.setInterval(function() {
+            $('iframe.rcloud-shiny').each(function() {
+                var shtitle = this.contentWindow.document.title;
+                if(shtitle !== title_)
+                    document.title = title_ = shtitle;
+            });
+        }, 2000);
         k({hash: window.location.hash, search: window.location.search});
     },
     on_message: function(id, msg, k) {
