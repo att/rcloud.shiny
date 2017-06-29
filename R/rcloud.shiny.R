@@ -1,6 +1,6 @@
 rcloud.proxy.url <- function(port, search, hash) {
   info <- rcloud.session.info()
-  paste0('proxy.R/', info$user, '/', info$id, ':', port, '/', search, hash)
+  paste0('/proxy.R/', info$user, '/', info$id, ':', port, '/', search, hash)
 }
 
 rcloud.shinyApp <- function(ui, server, options) {
@@ -34,12 +34,12 @@ rcloud.shinyApp <- function(ui, server, options) {
     #rcloud.print(paste("shiny message ", msg))
     onMessageHandler(FALSE, msg)
   }
-
+  
   ocaps <- list(
     connect = rcloud.support:::make.oc(connect),
     send = rcloud.support:::make.oc(receive)
   );
-
+  
   .GlobalEnv$.ocap.idle <- function() {
     shiny:::serviceApp()
   }
@@ -50,6 +50,7 @@ rcloud.shinyApp <- function(ui, server, options) {
   host <- rcloud.get.conf.value('host')
   appInfo <- override.runApp(app, host=nsl(host))
 
+  
   loc <- rcloud.shiny.caps$init(ocaps);
   serverFuncSource <- function() {
     server
