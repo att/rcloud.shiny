@@ -4,7 +4,7 @@ Version: 0.5
 Author: Gordon Woodhull <gordon@research.att.com>
 Maintainer: Gordon Woodhull <gordon@research.att.com>
 Description: rcloud.shiny connects a Shiny app to an RCloud server using ocaps instead of websockets
-Depends: rcloud.support (>= 1.8-0)
-Suggests: rcloud.web, shiny (>= 0.14)
+Depends: rcloud.support (>= 1.8-0), shiny (>= 0.14)
+Suggests: rcloud.web
 NOTE: --- packages that are not on CRAN/RForge.net *must* be in Suggests! ---
 License: GPL-3, MIT

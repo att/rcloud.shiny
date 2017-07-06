@@ -8,8 +8,8 @@ rcloud.shiny.caps <- NULL
                                      paste(readLines(path), collapse='\n'))
     caps
   }
-  rcloud.shiny.caps <<- f("rcloud.shiny", "rcloud.shiny.js")
-  if(!is.null(rcloud.shiny.caps)) {
-    rcloud.shiny.caps$init(list());
-  }
+    rcloud.shiny.caps <<- f("rcloud.shiny", "rcloud.shiny.js")
+    if(!is.null(rcloud.shiny.caps)) {
+      rcloud.shiny.caps$init(list());
+    }
 }

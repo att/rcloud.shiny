@@ -1,1 +1,5 @@
 export(rcloud.shinyApp)
+
+export(shinyApp)
+export(print.shiny.appobj)
+S3method(print, shiny.appobj)
