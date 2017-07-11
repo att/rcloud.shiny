@@ -4,9 +4,14 @@ rcloud.proxy.url <- function(port, search, hash) {
 }
 
 rcloud.shinyApp <- function(ui, server, options) {
-  library(rcloud.web)
-  library(shiny)
-
+  if(!requireNamespace("rcloud.web", quietly = TRUE)) {
+    stop("'rcloud.web' is needed for this function to work. Please install it.",
+         call. = FALSE)
+  }
+  if(!requireNamespace("shiny", quietly = TRUE)) {
+    stop("'shiny' is needed for this function to work. Please install it.",
+         call. = FALSE)
+  }
   appHandlers <- NULL
   onMessageHandler <- NULL
   onCloseHandler <- NULL
@@ -55,6 +60,6 @@ rcloud.shinyApp <- function(ui, server, options) {
   serverFuncSource <- function() {
     server
   }
-  rcw.result(body = paste0('<iframe src="', rcloud.proxy.url(appInfo$port, loc$search, loc$hash), '" class="rcloud-shiny" frameBorder="0" style="position: absolute; left: 0px; top: 0px; width: 100%; height: 100%;"></iframe>'))
+  rcloud.web::rcw.result(body = paste0('<iframe src="', rcloud.proxy.url(appInfo$port, loc$search, loc$hash), '" class="rcloud-shiny" frameBorder="0" style="position: absolute; left: 0px; top: 0px; width: 100%; height: 100%;"></iframe>'))
 }
 
