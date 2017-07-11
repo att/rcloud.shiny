@@ -4,9 +4,14 @@ rcloud.proxy.url <- function(port, search, hash) {
 }
 
 rcloud.shinyApp <- function(ui, server, options) {
-  library(rcloud.web)
-  library(shiny)
-
+  if(!requireNamespace("rcloud.web", quietly = TRUE)) {
+    stop("'rcloud.web' is needed for this function to work. Please install it.",
+         call. = FALSE)
+  }
+  if(!requireNamespace("shiny", quietly = TRUE)) {
+    stop("'shiny' is needed for this function to work. Please install it.",
+         call. = FALSE)
+  }
   appHandlers <- NULL
   onMessageHandler <- NULL
   onCloseHandler <- NULL
