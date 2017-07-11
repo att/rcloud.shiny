@@ -121,7 +121,7 @@ override.renderPage <- function(ui, connection, showcase=0) {
     htmlDependency("json2", "2014.02.04", c(href="shared"), script = "json2-min.js"),
     htmlDependency("jquery", "1.12.4", c(href="shared"), script = "jquery.min.js"),
     htmlDependency("babel-polyfill", "6.7.2", c(href="shared"), script = "babel-polyfill.min.js"),
-    htmlDependency("rcloud.shiny", "0.4", c(href="/shared.R/rcloud.shiny/"), script = "rcloud.shiny.child.js"),
+    htmlDependency("rcloud.shiny", utils::packageVersion("rcloud.shiny"), c(href="/shared.R/rcloud.shiny/"), script = "rcloud.shiny.child.js"),
     htmlDependency("shiny", utils::packageVersion("shiny"), c(href="shared"),
       script = if (getOption("shiny.minified", TRUE)) "shiny.min.js" else "shiny.js",
       stylesheet = "shiny.css")
