@@ -2,6 +2,7 @@
 
 var sockets_ = [];
 var ocaps_ = null;
+var title_ = "RCloud", favicon_;
 
 function fakeWebSocket() {
     var fws = {
@@ -31,7 +32,25 @@ return {
         window.rcloud.create_fake_shiny_websocket = function() {
             return fakeWebSocket();
         };
-        k();
+
+        window.setInterval(function() {
+            $('iframe.rcloud-shiny').each(function() {
+                var shtitle = this.contentWindow.document.title;
+                if(shtitle !== title_)
+                    document.title = title_ = shtitle;
+                var favlink = this.contentWindow.document.querySelector("link[rel*='icon']");
+                if(!favicon_ && favlink) {
+                    // adapted from http://stackoverflow.com/questions/260857/changing-website-favicon-dynamically#260876
+                    var link = document.querySelector("link[rel*='icon']") || document.createElement('link');
+                    link.type = 'image/x-icon';
+                    link.rel = favlink.rel;
+                    link.href = favlink.href;
+                    document.getElementsByTagName('head')[0].appendChild(link);
+                    favicon_ = link;
+                }
+            });
+        }, 2000);
+        k({hash: window.location.hash, search: window.location.search});
     },
     on_message: function(id, msg, k) {
         if(_.isArray(msg)) {
