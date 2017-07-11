@@ -1,3 +1,7 @@
+## rcloud.shiny 0.5
+* `rcloud.shiny` is now self-contained in its own package - `/shiny.html`
+  forwards to `shared.R/rcloud.shiny/shiny.html`
+
 ## rcloud.shiny 0.4.2
 * Show shiny title and shiny favicon
 
