@@ -13,3 +13,5 @@ rcloud.shiny.caps <- NULL
     rcloud.shiny.caps$init(list());
   }
 }
+
+rcloud.shiny.debugMsg <- function(content) rcloud.shiny.caps$debugMsg(content)

@@ -21,24 +21,36 @@ rcloud.shinyApp <- function(ui, server, options) {
       },
       onClose = function(h) {
         onCloseHandler <<- h
-      })
+      }, 
+      close = function() {
+        parentEnv <- parent.frame(2)
+        errorVar <- "e"
+        errorMsg <- NULL
+        # Retrieve error message if socket is closed as a result of unhandled error
+        if(exists(errorVar, envir =  parentEnv)) {
+          error <- get("e", envir=parentEnv)
+          errorMsg <- jsonlite::toJSON(list(type="rcloud-shiny-error", msg=as.character(error)), auto_unbox=TRUE)
+        }
+        rcloud.shiny.caps$on_close(id, errorMsg)
+        onCloseHandler()
+      });
   }
 
   connect <- function(id) {
-    #rcloud.print("shiny connected")
+    rcloud.shiny.debugMsg("Shiny connected")
     fws <- fakeWebSocket(id)
     appHandlers$ws(fws)
   }
 
   receive <- function(id, msg) {
-    #rcloud.print(paste("shiny message ", msg))
+    rcloud.shiny.debugMsg(paste("Shiny message", msg))
     onMessageHandler(FALSE, msg)
   }
   
   ocaps <- list(
     connect = rcloud.support:::make.oc(connect),
     send = rcloud.support:::make.oc(receive)
-  );
+  )
   
   .GlobalEnv$.ocap.idle <- function() {
     shiny:::serviceApp()

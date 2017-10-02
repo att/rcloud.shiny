@@ -84,11 +84,28 @@ return {
         }
         var msj = JSON.parse(msg);
         debug("Shiny to client: ", msj);
+
         if(msj && msj.values && msj.values.mytable1 && msj.values.mytable1.x && msj.values.mytable1.x.options)
             debug("DT options: ", msj.values.mytable1.x.options);
         // [id] ?
         sockets_[0].onmessage({data:msg});
         k();
+    }, 
+    on_close: function(id, msg, k) {
+        console.log("Closing Shiny socket: ", msg);
+        if(msg) {
+          var msj = JSON.parse(msg);
+        
+          if(msj.type && msj.type === 'rcloud-shiny-error') {
+            RCloud.UI.fatal_dialog(msj.msg, 'Close');
+          }
+        }
+        sockets_[0].onclose();
+        k();
+    }, 
+    debugMsg: function(content, k) {
+      debug("rcloud.shiny R: ", content);
+      k();
     }
 };
 })()) /*jshint -W033 */ // this is an expression not a statement
