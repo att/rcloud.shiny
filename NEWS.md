@@ -1,3 +1,8 @@
+## rcloud.shiny 0.5.1
+* Errors in some reactive contexts could trigger the unhelpful error `Error in self$close() :
+  attempt to apply non-function`, masking the actual error and hindering debugging. We define
+  `self$close()` on our fake web socket now.
+
 ## rcloud.shiny 0.5
 * `rcloud.shiny` is now self-contained in its own package - `/shiny.html`
   forwards to `shared.R/rcloud.shiny/shiny.html`
