@@ -57,7 +57,7 @@ showcaseHead <- function() {
          href="shared/shiny-showcase.css"),
     if (file.exists(mdfile))
       script(type="text/markdown", id="showcase-markdown-content",
-             paste(readUTF8(mdfile), collapse="\n"))
+             paste(shiny:::readUTF8(mdfile), collapse="\n"))
     else ""
   ))
   
@@ -86,10 +86,10 @@ appMetadata <- function(desc) {
   else ""
 }
 
-navTabsHelper <- function(files, prefix = "") {
+navTabsHelper <- function(files, prefix = "", active = c("app.r", "server.r")) {
   lapply(files, function(file) {
     with(tags,
-         li(class=if (tolower(file) %in% c("app.r", "server.r")) "active" else "",
+         li(class=if (tolower(file) %in% active) "active" else "",
             a(href=paste("#", gsub(".", "_", file, fixed=TRUE), "_code", sep=""),
               "data-toggle"="tab", paste0(prefix, file)))
     )
@@ -110,11 +110,11 @@ navTabsDropdown <- function(files) {
   }
 }
 
-tabContentHelper <- function(files, path, language) {
+tabContentHelper <- function(files, path, language, active = c("app.r", "server.r")) {
   lapply(files, function(file) {
     with(tags,
          div(class=paste("tab-pane",
-                         if (tolower(file) %in% c("app.r", "server.r")) " active"
+                         if (tolower(file) %in% active) " active"
                          else "",
                          sep=""),
              id=paste(gsub(".", "_", file, fixed=TRUE),
@@ -123,18 +123,61 @@ tabContentHelper <- function(files, path, language) {
                  # we need to prevent the indentation of <code> ... </code>
                  HTML(format(tags$code(
                    class=paste0("language-", language),
-                   paste(readUTF8(file.path.ci(path, file)), collapse="\n")
+                   paste(shiny:::readUTF8(file.path.ci(path, file)), collapse="\n")
                  ), indent = FALSE))))
     )
   })
 }
 
+tabContentHelperFromNotebookCells <- function(files, language, active = c("app.r", "server.r")) {
+  lapply(files, function(file) {
+    with(tags,
+         div(class=paste("tab-pane",
+                         if (tolower(file$filename) %in% active) " active"
+                         else "",
+                         sep=""),
+             id=paste(gsub(".", "_", file$filename, fixed=TRUE),
+                      "_code", sep=""),
+             pre(class="shiny-code",
+                 # we need to prevent the indentation of <code> ... </code>
+                 HTML(format(tags$code(
+                   class=paste0("language-", language),
+                   paste(file$content, collapse = "\n")
+                 ), indent = FALSE))))
+    )
+  })
+}
+
+navTabsHelperFromNotebookCells <- function(files, prefix = "", active = c("app.r", "server.r")) {
+  lapply(files, function(file) {
+    with(tags,
+         li(class=if (tolower(file$filename) %in% active) "active" else "",
+            a(href=paste("#", gsub(".", "_", file$filename, fixed=TRUE), "_code", sep=""),
+              "data-toggle"="tab", paste0(prefix, file$filename)))
+    )
+  })
+}
+
+# Get list of notebook cells
+list.notebook.files <- function(pattern) {
+  notebook_in_mini <- rcloud.support:::rcloud.session.notebook()
+  n <- notebook_in_mini$content
+  nn <- n$files
+  nn <- nn[grep(pattern, names(nn))]
+  invisible(nn)
+}
+
 # Returns tags containing the application's code in Bootstrap-style tabs in
 # showcase mode.
 showcaseCodeTabs <- function(codeLicense) {
-  rFiles <- list.files(pattern = "\\.[rR]$")
+  rFiles <-  list.notebook.files(pattern = "^part.*\\.[rR]$")
+  if (length(rFiles) > 0) {
+    active <- tolower(names(rFiles)[1])
+  } else {
+    active <- c("app.r", "server.r")
+  }
   wwwFiles <- list()
-  if (isTRUE(.globals$IncludeWWW)) {
+  if (isTRUE(shiny:::.globals$IncludeWWW)) {
     path <- file.path(getwd(), "www")
     wwwFiles$jsFiles <- list.files(path, pattern = "\\.js$")
     wwwFiles$cssFiles <- list.files(path, pattern = "\\.css$")
@@ -147,23 +190,27 @@ showcaseCodeTabs <- function(codeLicense) {
                    icon("level-up"),
                    "show with app"),
                  ul(class="nav nav-tabs",
-                    navTabsHelper(rFiles),
+                    navTabsHelperFromNotebookCells(rFiles, active = active),
                     navTabsDropdown(unlist(wwwFiles))
                  ),
                  div(class="tab-content", id="showcase-code-content",
-                     tabContentHelper(rFiles, path = getwd(), language = "r"),
+                     tabContentHelperFromNotebookCells(rFiles, language = "r", active = active),
                      tabContentHelper(wwwFiles$jsFiles,
                                       path = paste0(getwd(), "/www"),
-                                      language = "javascript"),
+                                      language = "javascript", active = active),
                      tabContentHelper(wwwFiles$cssFiles,
                                       path = paste0(getwd(), "/www"),
-                                      language = "css"),
+                                      language = "css", active = active),
                      tabContentHelper(wwwFiles$htmlFiles,
                                       path = paste0(getwd(), "/www"),
-                                      language = "xml")
+                                      language = "xml", active = active)
                  ),
                  codeLicense))
 }
+
+file.path.ci <- function(...) {
+  shiny:::file.path.ci(...)
+} 
 
 # Returns tags containing the showcase application information (readme and
 # code).
@@ -173,7 +220,7 @@ showcaseAppInfo <- function() {
   readmemd <- file.path.ci(getwd(), "Readme.md")
   hasReadme <- file.exists(readmemd)
   if (hasDesc) {
-    con <- textConnection(readUTF8(descfile))
+    con <- textConnection(shiny:::readUTF8(descfile))
     on.exit(close(con), add = TRUE)
     desc <- read.dcf(con)
   }
@@ -211,8 +258,8 @@ showcaseBody <- function(htmlBody) {
 
 # Sets the defaults for showcase mode (for app boot).
 setShowcaseDefault <- function(showcaseDefault) {
-  .globals$showcaseDefault <- showcaseDefault
-  .globals$showcaseOverride <- as.logical(showcaseDefault)
+  shiny:::.globals$showcaseDefault <- showcaseDefault
+  shiny:::.globals$showcaseOverride <- as.logical(showcaseDefault)
 }
 
 

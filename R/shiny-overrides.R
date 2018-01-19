@@ -57,7 +57,7 @@ override.uiHttpHandler <- function(ui, uiPattern = "^/$") {
 
     showcaseMode <- shiny:::.globals$showcaseDefault
     if (shiny:::.globals$showcaseOverride) {
-      mode <- showcaseModeOfReq(req)
+      mode <- shiny:::showcaseModeOfReq(req)
       if (!is.null(mode))
         showcaseMode <- mode
     }

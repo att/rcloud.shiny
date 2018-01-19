@@ -3,7 +3,7 @@ rcloud.proxy.url <- function(port, search, hash) {
   paste0('/proxy.R/', info$user, '/', info$id, ':', port, '/', search, hash)
 }
 
-rcloud.shinyApp <- function(ui, server, options) {
+rcloud.shinyApp <- function(ui, server, options = list()) {
   library(rcloud.web)
   library(shiny)
 
@@ -59,8 +59,14 @@ rcloud.shinyApp <- function(ui, server, options) {
   appHandlers <- shiny:::createAppHandlers(NULL, serverFuncSource)
   app <- override.shinyApp(ui = ui, server = server)
 
+  extraArgNames <- names(as.list(args(override.runApp)))
+  extraArgNames <- extraArgNames[which(nchar(extraArgNames) > 0)]
+  
+  extraArgs <- options
+  extraArgs <- extraArgs[which(names(extraArgs) %in% extraArgNames)]
+  
   host <- rcloud.get.conf.value('host')
-  appInfo <- override.runApp(app, host=nsl(host))
+  appInfo <- do.call(override.runApp, c(list(app, host=nsl(host)), extraArgs))
 
   
   loc <- rcloud.shiny.caps$init(ocaps);
