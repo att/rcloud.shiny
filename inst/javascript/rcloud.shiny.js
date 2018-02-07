@@ -34,7 +34,7 @@ function fakeWebSocket() {
 }
 
 function isMini() {
-  return window.document.location.pathname.endsWith(SHINY_HTML_LOCATION);
+  return !RCloud.UI.advanced_menu.add;
 }
 
 return {
@@ -87,8 +87,8 @@ return {
 
         if(msj && msj.values && msj.values.mytable1 && msj.values.mytable1.x && msj.values.mytable1.x.options)
             debug("DT options: ", msj.values.mytable1.x.options);
-        // [id] ?
-        sockets_[0].onmessage({data:msg});
+
+        sockets_[id].onmessage({data:msg});
         k();
     }, 
     on_close: function(id, msg, k) {
@@ -100,7 +100,7 @@ return {
             RCloud.UI.fatal_dialog(msj.msg, 'Close');
           }
         }
-        sockets_[0].onclose();
+        sockets_[id].onclose();
         k();
     }, 
     debugMsg: function(content, k) {
