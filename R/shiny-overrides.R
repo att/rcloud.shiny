@@ -119,13 +119,18 @@ override.renderPage <- function(ui, connection, showcase=0) {
 
   shiny_deps <- list(
     htmlDependency("json2", "2014.02.04", c(href="shared"), script = "json2-min.js"),
-    htmlDependency("jquery", "1.12.4", c(href="shared"), script = "jquery.min.js"),
-    htmlDependency("babel-polyfill", "6.7.2", c(href="shared"), script = "babel-polyfill.min.js"),
+    htmlDependency("jquery", "1.12.4", c(href="shared"), script = "jquery.min.js"))
+    if(utils::compareVersion(as.character(utils::packageVersion('shiny')), "1.0.1") < 0) {
+      # Shiny >= 1.0.1 doesn't include babel-polyfill
+      shiny_deps <- c(shiny_deps, list(
+        htmlDependency("babel-polyfill", "6.7.2", c(href="shared"), script = "babel-polyfill.min.js")))
+    }
+  shiny_deps <- c(shiny_deps,list(
     htmlDependency("rcloud.shiny", utils::packageVersion("rcloud.shiny"), c(href="/shared.R/rcloud.shiny/"), script = "rcloud.shiny.child.js"),
     htmlDependency("shiny", utils::packageVersion("shiny"), c(href="shared"),
       script = if (getOption("shiny.minified", TRUE)) "shiny.min.js" else "shiny.js",
       stylesheet = "shiny.css")
-  )
+  ))
   html <- renderDocument(ui, shiny_deps, processDep = createWebDependency)
   shiny:::writeUTF8(html, con = connection)
 }

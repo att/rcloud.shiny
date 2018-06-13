@@ -1,3 +1,6 @@
+## rcloud.shiny 0.5.3
+* support for multiple Shiny sockets for flexdashboard support
+
 ## rcloud.shiny 0.5.2
 * `rcloud.shinyApp` supports `options = list(display.mode = "showcase")`
 

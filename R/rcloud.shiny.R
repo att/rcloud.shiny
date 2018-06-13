@@ -3,14 +3,18 @@ rcloud.proxy.url <- function(port, search, hash) {
   paste0('/proxy.R/', info$user, '/', info$id, ':', port, '/', search, hash)
 }
 
-rcloud.shinyApp <- function(ui, server, options = list()) {
+rcloud.shinyApp <- function(ui, server, onStart = NULL, options = list(), uiPattern = "/") {
+  rcloud.shinyAppInternal(ui, server, onStart = onStart, options = options, uiPattern = uiPattern)
+}
+
+rcloud.shinyAppInternal <- function(ui, server, onStart = NULL, options = list(), uiPattern = "/", renderer = function(url) { rcloud.web::rcw.result(body = paste0('<iframe src="', url, '" class="rcloud-shiny" frameBorder="0" style="position: absolute; left: 0px; top: 0px; width: 100%; height: 100%;"></iframe>'))}) {
   library(rcloud.web)
   library(shiny)
-
+  
   appHandlers <- NULL
   onMessageHandler <- NULL
   onCloseHandler <- NULL
-
+  
   fakeWebSocket <- function(id) {
     list(
       send = function(msg) {
@@ -35,13 +39,13 @@ rcloud.shinyApp <- function(ui, server, options = list()) {
         onCloseHandler()
       });
   }
-
+  
   connect <- function(id) {
     rcloud.shiny.debugMsg("Shiny connected")
     fws <- fakeWebSocket(id)
     appHandlers$ws(fws)
   }
-
+  
   receive <- function(id, msg) {
     rcloud.shiny.debugMsg(paste("Shiny message", msg))
     onMessageHandler(FALSE, msg)
@@ -55,10 +59,10 @@ rcloud.shinyApp <- function(ui, server, options = list()) {
   .GlobalEnv$.ocap.idle <- function() {
     shiny:::serviceApp()
   }
-
+  
   appHandlers <- shiny:::createAppHandlers(NULL, serverFuncSource)
-  app <- override.shinyApp(ui = ui, server = server)
-
+  app <- override.shinyApp(ui = ui, server = server, onStart = onStart, uiPattern = uiPattern)
+  
   extraArgNames <- names(as.list(args(override.runApp)))
   extraArgNames <- extraArgNames[which(nchar(extraArgNames) > 0)]
   
@@ -67,12 +71,13 @@ rcloud.shinyApp <- function(ui, server, options = list()) {
   
   host <- rcloud.get.conf.value('host')
   appInfo <- do.call(override.runApp, c(list(app, host=nsl(host)), extraArgs))
-
+  
   
   loc <- rcloud.shiny.caps$init(ocaps);
   serverFuncSource <- function() {
     server
   }
-  rcloud.web::rcw.result(body = paste0('<iframe src="', rcloud.proxy.url(appInfo$port, loc$search, loc$hash), '" class="rcloud-shiny" frameBorder="0" style="position: absolute; left: 0px; top: 0px; width: 100%; height: 100%;"></iframe>'))
+  renderer(rcloud.proxy.url(appInfo$port, loc$search, loc$hash))
 }
+
 
