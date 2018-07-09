@@ -142,19 +142,19 @@ override.runApp <- function(appDir=getwd(),
                                             interactive()),
                    host=getOption('shiny.host', '127.0.0.1'),
                    workerId="", quiet=FALSE,
-                   display.mode=c("auto", "normal", "showcase")) {
-  # RCloud mod: the rcloud.shiny version of the function doesn't block, so disable
-  # all cleanup - obviously we'll need to fix this later
-  ## on.exit({
-  ##   handlerManager$clear()
-  ## }, add = TRUE)
+                   display.mode=c("auto", "normal", "showcase"),
+                   exit.handler = on.exit ) {
+  exit.handler({
+    shiny:::handlerManager$clear()
+  }, add = TRUE)
 
   # Enable per-app Shiny options
   oldOptionSet <- shiny:::.globals$options
-  # RCloud mod
-  ## on.exit({
-  ##   .globals$options <- oldOptionSet
-  ## },add = TRUE)
+  
+  exit.handler({
+    localGlobals <- shiny:::.globals
+    localGlobals$options <- oldOptionSet
+  },add = TRUE)
 
   if (is.null(host) || is.na(host))
     host <- '0.0.0.0'
@@ -162,8 +162,8 @@ override.runApp <- function(appDir=getwd(),
   # Make warnings print immediately
   # Set pool.scheduler to support pool package
   ops <- options(warn = 1, pool.scheduler = shiny:::scheduleTask)
-  # RCloud mod
-  ## on.exit(options(ops), add = TRUE)
+
+  exit.handler(options(ops), add = TRUE)
 
   shiny:::workerId(workerId)
 
@@ -196,8 +196,8 @@ override.runApp <- function(appDir=getwd(),
         appDir, "DESCRIPTION")
     if (file.exists(desc)) {
       con <- file(desc, encoding = checkEncoding(desc))
-      # RCloud mod
-      ## on.exit(close(con), add = TRUE)
+      
+      exit.handler(close(con), add = TRUE)
       settings <- read.dcf(con)
       if ("DisplayMode" %in% colnames(settings)) {
         mode <- settings[1, "DisplayMode"]
@@ -285,18 +285,17 @@ override.runApp <- function(appDir=getwd(),
 
   # Set up the onEnd before we call onStart, so that it gets called even if an
   # error happens in onStart.
-  # RCloud mod
-  ## if (!is.null(appParts$onEnd))
-  ##   on.exit(appParts$onEnd(), add = TRUE)
+  if (!is.null(appParts$onEnd))
+    exit.handler(appParts$onEnd(), add = TRUE)
+  
   if (!is.null(appParts$onStart))
     appParts$onStart()
 
   server <- shiny:::startApp(appParts, port, host, quiet)
 
-  # RCloud mod: rcloud.shiny will need to do this somewhere else
-  ## on.exit({
-  ##   stopServer(server)
-  ## }, add = TRUE)
+  exit.handler({
+    httpuv:::stopServer(server)
+  }, add = TRUE)
 
   # RCloud mod
   ## if (!is.character(port)) {
@@ -314,10 +313,10 @@ override.runApp <- function(appDir=getwd(),
 
   # call application hooks
   shiny:::callAppHook("onAppStart", appUrl)
-  # RCloud mod
-  ## on.exit({
-  ##   callAppHook("onAppStop", appUrl)
-  ## }, add = TRUE)
+
+  exit.handler({
+     shiny:::callAppHook("onAppStop", appUrl)
+  }, add = TRUE)
 
   # RCloud mod: can't modify shiny? hope we don't need to
   ## shiny:::.globals$reterror <- NULL
