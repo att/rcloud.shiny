@@ -1,3 +1,6 @@
+## rcloud.shiny 0.5.4
+* shiny cleanly shuts down and invokes hooks, so you can do `session$onSessionEnded(function() { ... })` now
+
 ## rcloud.shiny 0.5.3
 * support for multiple Shiny sockets for flexdashboard support
 
