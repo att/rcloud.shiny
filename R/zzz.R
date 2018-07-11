@@ -17,10 +17,7 @@ rcloud.shiny.caps <- NULL
   options(shiny.htmlDependencies = rcloud.shiny.htmlDependencies)
   options(shiny.launch.browser = FALSE)
   options(shiny.serviceAppRunner = function() {})
-  options(shiny.showcase.navTabsHelper = .navTabsHelperFromNotebookCells)
-  options(shiny.showcase.tabContentHelper = .tabContentHelperFromNotebookCells)
-  options(shiny.showcase.listNotebookRFiles = .listNotebookRFiles)
-  options(shiny.showcase.getShinyAppSrcFiles = .getShinyAppSrcFiles)
+  options(rcloud.showcase.showcaseCodeTabs = .rcloud.shiny.showcaseCodeTabs)
 }
 
 rcloud.shiny.debugMsg <- function(content) rcloud.shiny.caps$debugMsg(content)

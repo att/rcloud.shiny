@@ -177,8 +177,7 @@ rcloud.shinyAppInternal <- function(ui, server, onStart = NULL, options = list()
   renderer(rcloud.proxy.url(shiny:::.globals$lastPort, loc$search, loc$hash))
 }
 
-
-.tabContentHelperFromNotebookCells <- function(files, path, language, srcs = c("app.r", "server.r")) {
+.rcloud.shiny.tabContentHelper <- function(files, path, language, srcs = c("app.r", "server.r")) {
   lapply(files, function(file) {
     with(tags,
          div(class=paste("tab-pane",
@@ -197,7 +196,7 @@ rcloud.shinyAppInternal <- function(ui, server, onStart = NULL, options = list()
   })
 }
 
-.navTabsHelperFromNotebookCells <- function(files, prefix = "", srcs = c("app.r", "server.r")) {
+.rcloud.shiny.navTabsHelper <- function(files, prefix = "", srcs = c("app.r", "server.r")) {
   lapply(files, function(file) {
     with(tags,
          li(class=if (tolower(file$filename) %in% srcs) "active" else "",
@@ -207,9 +206,62 @@ rcloud.shinyAppInternal <- function(ui, server, onStart = NULL, options = list()
   })
 }
 
+.rcloud.shiny.navTabsDropdown <- function(files, srcs = c("app.r", "server.r")) {
+  if (length(files) > 0) {
+    with(tags,
+         li(role="presentation", class="dropdown",
+            a(class="dropdown-toggle", `data-toggle`="dropdown", href="#",
+              role="button", `aria-haspopup`="true", `aria-expanded`="false",
+              "Assets", span(class="caret")
+            ),
+            ul(class="dropdown-menu", .rcloud.shiny.navTabsHelper(files, srcs = srcs))
+         )
+    )
+  }
+}
+
 .listNotebookRFiles <- function() {
   list.notebook.files(pattern = "^part.*\\.[rR]$")
 }
+
+.staticNotebookResources <- function(path, pattern) {
+  wwwFiles <- list()
+  if (isTRUE(shiny:::.globals$IncludeWWW)) {
+    wwwFiles$jsFiles <- list.notebook.files(pattern = "\\.js$")
+    wwwFiles$cssFiles <- list.notebook.files(pattern = "\\.css$")
+    wwwFiles$htmlFiles <- list.notebook.files(pattern = "\\.html$")
+  }
+  invisible(wwwFiles)
+}
+
+.rcloud.shiny.showcaseCodeTabs <- function(codeLicense) {
+  rFiles <- .listNotebookRFiles()
+  srcRfiles <- .getShinyAppSrcFiles(rFiles)
+  
+  wwwFiles <- .staticNotebookResources()
+  
+  with(tags, div(id="showcase-code-tabs",
+                 a(id="showcase-code-position-toggle",
+                   class="btn btn-default btn-sm",
+                   onclick="toggleCodePosition()",
+                   icon("level-up"),
+                   "show with app"),
+                 ul(class="nav nav-tabs",
+                    .rcloud.shiny.navTabsHelper(rFiles, srcs = srcRfiles),
+                    .rcloud.shiny.navTabsDropdown(unlist(wwwFiles, recursive = FALSE), srcs = srcRfiles)
+                 ),
+                 div(class="tab-content", id="showcase-code-content",
+                     .rcloud.shiny.tabContentHelper(rFiles, language = "r", srcs = srcRfiles),
+                     .rcloud.shiny.tabContentHelper(wwwFiles$jsFiles,
+                                         language = "javascript", srcs = srcRfiles),
+                     .rcloud.shiny.tabContentHelper(wwwFiles$cssFiles,
+                                         language = "css", srcs = srcRfiles),
+                     .rcloud.shiny.tabContentHelper(wwwFiles$htmlFiles,
+                                         language = "xml", srcs = srcRfiles)
+                 ),
+                 codeLicense))
+}
+
 
 .getShinyAppSrcFiles <- function(rFiles) {
   if (length(rFiles) > 0) {

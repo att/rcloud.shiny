@@ -86,17 +86,17 @@ appMetadata <- function(desc) {
   else ""
 }
 
-navTabsHelper <- function(files, prefix = "", srcs = c("app.r", "server.r")) {
+navTabsHelper <- function(files, prefix = "") {
   lapply(files, function(file) {
     with(tags,
-         li(class=if (tolower(file) %in% srcs) "active" else "",
+         li(class=if (tolower(file) %in% c("app.r", "server.r")) "active" else "",
             a(href=paste("#", gsub(".", "_", file, fixed=TRUE), "_code", sep=""),
               "data-toggle"="tab", paste0(prefix, file)))
     )
   })
 }
 
-navTabsDropdown <- function(files, srcs = c("app.r", "server.r")) {
+navTabsDropdown <- function(files) {
   if (length(files) > 0) {
     with(tags,
          li(role="presentation", class="dropdown",
@@ -104,17 +104,17 @@ navTabsDropdown <- function(files, srcs = c("app.r", "server.r")) {
               role="button", `aria-haspopup`="true", `aria-expanded`="false",
               "www", span(class="caret")
             ),
-            ul(class="dropdown-menu", navTabsHelper(files, srcs = srcs))
+            ul(class="dropdown-menu", navTabsHelper(files))
          )
     )
   }
 }
 
-tabContentHelper <- function(files, path, language, srcs = c("app.r", "server.r")) {
+tabContentHelper <- function(files, path, language) {
   lapply(files, function(file) {
     with(tags,
          div(class=paste("tab-pane",
-                         if (tolower(file) %in% srcs) " active"
+                         if (tolower(file) %in% c("app.r", "server.r")) " active"
                          else "",
                          sep=""),
              id=paste(gsub(".", "_", file, fixed=TRUE),
@@ -123,31 +123,18 @@ tabContentHelper <- function(files, path, language, srcs = c("app.r", "server.r"
                  # we need to prevent the indentation of <code> ... </code>
                  HTML(format(tags$code(
                    class=paste0("language-", language),
-                   paste(shiny:::readUTF8(file.path.ci(path, file)), collapse="\n")
+                   paste(readUTF8(file.path.ci(path, file)), collapse="\n")
                  ), indent = FALSE))))
     )
   })
 }
 
-listNotebookRFiles <- function() {
-  list.files(pattern = "\\.[rR]$")
-}
-
-getShinyAppSrcFiles <- function() {
-  c("app.r", "server.r")
-}
-
 # Returns tags containing the application's code in Bootstrap-style tabs in
 # showcase mode.
 showcaseCodeTabs <- function(codeLicense) {
-  rFiles <- getOption('shiny.showcase.listNotebookRFiles', listNotebookRFiles)()
-  srcRfiles <- getOption('shiny.showcase.getShinyAppSrcFiles', getShinyAppSrcFiles) (rFiles)
-  
-  navTabsHelperFun <- getOption('shiny.showcase.navTabsHelper', navTabsHelper)
-  tabContentHelperFun <- getOption('shiny.showcase.tabContentHelper', tabContentHelper)
-  
+  rFiles <- list.files(pattern = "\\.[rR]$")
   wwwFiles <- list()
-  if (isTRUE(shiny:::.globals$IncludeWWW)) {
+  if (isTRUE(.globals$IncludeWWW)) {
     path <- file.path(getwd(), "www")
     wwwFiles$jsFiles <- list.files(path, pattern = "\\.js$")
     wwwFiles$cssFiles <- list.files(path, pattern = "\\.css$")
@@ -160,20 +147,20 @@ showcaseCodeTabs <- function(codeLicense) {
                    icon("level-up"),
                    "show with app"),
                  ul(class="nav nav-tabs",
-                    navTabsHelperFun(rFiles, srcs = srcRfiles),
-                    navTabsDropdown(unlist(wwwFiles), srcs = srcRfiles)
+                    navTabsHelper(rFiles),
+                    navTabsDropdown(unlist(wwwFiles))
                  ),
                  div(class="tab-content", id="showcase-code-content",
-                     tabContentHelperFun(rFiles, path = getwd(), language = "r", srcs = srcRfiles),
+                     tabContentHelper(rFiles, path = getwd(), language = "r"),
                      tabContentHelper(wwwFiles$jsFiles,
                                       path = paste0(getwd(), "/www"),
-                                      language = "javascript", srcs = srcRfiles),
+                                      language = "javascript"),
                      tabContentHelper(wwwFiles$cssFiles,
                                       path = paste0(getwd(), "/www"),
-                                      language = "css", srcs = srcRfiles),
+                                      language = "css"),
                      tabContentHelper(wwwFiles$htmlFiles,
                                       path = paste0(getwd(), "/www"),
-                                      language = "xml", srcs = srcRfiles)
+                                      language = "xml")
                  ),
                  codeLicense))
 }
@@ -201,7 +188,7 @@ showcaseAppInfo <- function() {
                } else "",
                div(id="showcase-code-inline",
                    class=if (hasReadme || hasDesc) "col-sm-8" else "col-sm-10 col-sm-offset-1",
-                   showcaseCodeTabs(
+                   getOption('rcloud.showcase.showcaseCodeTabs', showcaseCodeTabs)(
                      if (hasDesc && "License" %in% colnames(desc)) {
                        small(class="showcase-code-license text-muted",
                              "Code license: ",
