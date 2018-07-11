@@ -28,6 +28,7 @@ rcloud.shinyApp <- function(ui, server, onStart = NULL, options = list(), uiPatt
 rcloud.shinyAppInternal <- function(ui, server, onStart = NULL, options = list(), uiPattern = "/", renderer = function(url) { rcloud.web::rcw.result(body = paste0('<iframe src="', url, '" class="rcloud-shiny" frameBorder="0" style="position: absolute; left: 0px; top: 0px; width: 100%; height: 100%;"></iframe>'))}) {
   library(rcloud.web)
   library(shiny)
+  library(htmltools)
   
   appHandlers <- NULL
   onMessageHandler <- NULL
@@ -173,7 +174,60 @@ rcloud.shinyAppInternal <- function(ui, server, onStart = NULL, options = list()
   serverFuncSource <- function() {
     server
   }
-  renderer(rcloud.proxy.url(appInfo$port, loc$search, loc$hash))
+  renderer(rcloud.proxy.url(shiny:::.globals$lastPort, loc$search, loc$hash))
 }
 
 
+.tabContentHelperFromNotebookCells <- function(files, path, language, srcs = c("app.r", "server.r")) {
+  lapply(files, function(file) {
+    with(tags,
+         div(class=paste("tab-pane",
+                         if (tolower(file$filename) %in% srcs) " active"
+                         else "",
+                         sep=""),
+             id=paste(gsub(".", "_", file$filename, fixed=TRUE),
+                      "_code", sep=""),
+             pre(class="shiny-code",
+                 # we need to prevent the indentation of <code> ... </code>
+                 HTML(format(tags$code(
+                   class=paste0("language-", language),
+                   paste(file$content, collapse = "\n")
+                 ), indent = FALSE))))
+    )
+  })
+}
+
+.navTabsHelperFromNotebookCells <- function(files, prefix = "", srcs = c("app.r", "server.r")) {
+  lapply(files, function(file) {
+    with(tags,
+         li(class=if (tolower(file$filename) %in% srcs) "active" else "",
+            a(href=paste("#", gsub(".", "_", file$filename, fixed=TRUE), "_code", sep=""),
+              "data-toggle"="tab", paste0(prefix, file$filename)))
+    )
+  })
+}
+
+.listNotebookRFiles <- function() {
+  list.notebook.files(pattern = "^part.*\\.[rR]$")
+}
+
+.getShinyAppSrcFiles <- function(rFiles) {
+  if (length(rFiles) > 0) {
+    tolower(names(rFiles)[1])
+  } else {
+    c("app.r", "server.r")
+  }
+}
+
+file.path.ci <- function(...) {
+  shiny:::file.path.ci(...)
+} 
+
+# Get list of notebook cells
+list.notebook.files <- function(pattern) {
+  notebook_in_mini <- rcloud.support:::rcloud.session.notebook()
+  n <- notebook_in_mini$content
+  nn <- n$files
+  nn <- nn[grep(pattern, names(nn))]
+  invisible(nn)
+}
