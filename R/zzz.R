@@ -13,11 +13,12 @@ rcloud.shiny.caps <- NULL
     rcloud.shiny.caps$init(list());
   }
   
+  # Shiny options
+  options(shiny.launch.browser = FALSE)
   options(shiny.uiHttpHandler = rcloud.shiny.uiHttpHandler)
   options(shiny.htmlDependencies = rcloud.shiny.htmlDependencies)
-  options(shiny.launch.browser = FALSE)
   options(shiny.serviceAppRunner = function() {})
-  options(rcloud.showcase.showcaseCodeTabs = .rcloud.shiny.showcaseCodeTabs)
+  options(shiny.showcase.codeTabs = .rcloud.shiny.codeTabs)
 }
 
 rcloud.shiny.debugMsg <- function(content) rcloud.shiny.caps$debugMsg(content)

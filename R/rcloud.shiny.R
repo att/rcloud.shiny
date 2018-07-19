@@ -148,7 +148,6 @@ rcloud.shinyAppInternal <- function(ui, server, onStart = NULL, options = list()
     }
   }
   
-  
   host <- rcloud.get.conf.value('host')
   appInfo <- tryCatch( {
     do.call(override.runApp, c(list(app, host=nsl(host)), extraArgs))
@@ -175,111 +174,4 @@ rcloud.shinyAppInternal <- function(ui, server, onStart = NULL, options = list()
     server
   }
   renderer(rcloud.proxy.url(shiny:::.globals$lastPort, loc$search, loc$hash))
-}
-
-.rcloud.shiny.tabContentHelper <- function(files, path, language, srcs = c("app.r", "server.r")) {
-  lapply(files, function(file) {
-    with(tags,
-         div(class=paste("tab-pane",
-                         if (tolower(file$filename) %in% srcs) " active"
-                         else "",
-                         sep=""),
-             id=paste(gsub(".", "_", file$filename, fixed=TRUE),
-                      "_code", sep=""),
-             pre(class="shiny-code",
-                 # we need to prevent the indentation of <code> ... </code>
-                 HTML(format(tags$code(
-                   class=paste0("language-", language),
-                   paste(file$content, collapse = "\n")
-                 ), indent = FALSE))))
-    )
-  })
-}
-
-.rcloud.shiny.navTabsHelper <- function(files, prefix = "", srcs = c("app.r", "server.r")) {
-  lapply(files, function(file) {
-    with(tags,
-         li(class=if (tolower(file$filename) %in% srcs) "active" else "",
-            a(href=paste("#", gsub(".", "_", file$filename, fixed=TRUE), "_code", sep=""),
-              "data-toggle"="tab", paste0(prefix, file$filename)))
-    )
-  })
-}
-
-.rcloud.shiny.navTabsDropdown <- function(files, srcs = c("app.r", "server.r")) {
-  if (length(files) > 0) {
-    with(tags,
-         li(role="presentation", class="dropdown",
-            a(class="dropdown-toggle", `data-toggle`="dropdown", href="#",
-              role="button", `aria-haspopup`="true", `aria-expanded`="false",
-              "Assets", span(class="caret")
-            ),
-            ul(class="dropdown-menu", .rcloud.shiny.navTabsHelper(files, srcs = srcs))
-         )
-    )
-  }
-}
-
-.listNotebookRFiles <- function() {
-  list.notebook.files(pattern = "^part.*\\.[rR]$")
-}
-
-.staticNotebookResources <- function(path, pattern) {
-  wwwFiles <- list()
-  if (isTRUE(shiny:::.globals$IncludeWWW)) {
-    wwwFiles$jsFiles <- list.notebook.files(pattern = "\\.js$")
-    wwwFiles$cssFiles <- list.notebook.files(pattern = "\\.css$")
-    wwwFiles$htmlFiles <- list.notebook.files(pattern = "\\.html$")
-  }
-  invisible(wwwFiles)
-}
-
-.rcloud.shiny.showcaseCodeTabs <- function(codeLicense) {
-  rFiles <- .listNotebookRFiles()
-  srcRfiles <- .getShinyAppSrcFiles(rFiles)
-  
-  wwwFiles <- .staticNotebookResources()
-  
-  with(tags, div(id="showcase-code-tabs",
-                 a(id="showcase-code-position-toggle",
-                   class="btn btn-default btn-sm",
-                   onclick="toggleCodePosition()",
-                   icon("level-up"),
-                   "show with app"),
-                 ul(class="nav nav-tabs",
-                    .rcloud.shiny.navTabsHelper(rFiles, srcs = srcRfiles),
-                    .rcloud.shiny.navTabsDropdown(unlist(wwwFiles, recursive = FALSE), srcs = srcRfiles)
-                 ),
-                 div(class="tab-content", id="showcase-code-content",
-                     .rcloud.shiny.tabContentHelper(rFiles, language = "r", srcs = srcRfiles),
-                     .rcloud.shiny.tabContentHelper(wwwFiles$jsFiles,
-                                         language = "javascript", srcs = srcRfiles),
-                     .rcloud.shiny.tabContentHelper(wwwFiles$cssFiles,
-                                         language = "css", srcs = srcRfiles),
-                     .rcloud.shiny.tabContentHelper(wwwFiles$htmlFiles,
-                                         language = "xml", srcs = srcRfiles)
-                 ),
-                 codeLicense))
-}
-
-
-.getShinyAppSrcFiles <- function(rFiles) {
-  if (length(rFiles) > 0) {
-    tolower(names(rFiles)[1])
-  } else {
-    c("app.r", "server.r")
-  }
-}
-
-file.path.ci <- function(...) {
-  shiny:::file.path.ci(...)
-} 
-
-# Get list of notebook cells
-list.notebook.files <- function(pattern) {
-  notebook_in_mini <- rcloud.support:::rcloud.session.notebook()
-  n <- notebook_in_mini$content
-  nn <- n$files
-  nn <- nn[grep(pattern, names(nn))]
-  invisible(nn)
 }

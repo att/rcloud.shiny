@@ -35,6 +35,12 @@ licenseLink <- function(licenseName) {
   }
 }
 
+# Expose file.path.ci as local function to reduce number of non-functional changes in this file
+file.path.ci <- function(...) {
+  shiny:::file.path.ci(...)
+} 
+
+
 # Returns tags containing showcase directives intended for the <HEAD> of the
 # document.
 showcaseHead <- function() {
@@ -188,7 +194,7 @@ showcaseAppInfo <- function() {
                } else "",
                div(id="showcase-code-inline",
                    class=if (hasReadme || hasDesc) "col-sm-8" else "col-sm-10 col-sm-offset-1",
-                   getOption('rcloud.showcase.showcaseCodeTabs', showcaseCodeTabs)(
+                   getOption('shiny.showcase.codeTabs', showcaseCodeTabs)(
                      if (hasDesc && "License" %in% colnames(desc)) {
                        small(class="showcase-code-license text-muted",
                              "Code license: ",
