@@ -4,7 +4,11 @@ rcloud.proxy.url <- function(port, search, hash) {
 }
 
 rcloud.shinyApp <- function(ui, server, onStart = NULL, options = list(), uiPattern = "/") {
-  rcloud.shinyAppInternal(ui, server, onStart = onStart, options = options, uiPattern = uiPattern)
+  library(rcloud.web)
+  library(shiny)
+  library(htmltools)
+  app <- override.shinyApp(ui = ui, server = server, onStart = onStart, uiPattern = uiPattern)
+  rcloud.shinyAppInternal(app, onStart = onStart, options = options)
 }
 
 .debug.msg <- function(msg = "", debug.enabled = .isDebugEnabled(), debug.file = .getLogFile()) {
@@ -123,10 +127,7 @@ rcloud.shinyApp <- function(ui, server, onStart = NULL, options = list(), uiPatt
   }
 }
 
-rcloud.shinyAppInternal <- function(ui, server, onStart = NULL, options = list(), uiPattern = "/", renderer = function(url) { rcloud.web::rcw.result(body = paste0('<iframe src="', url, '" class="rcloud-shiny" frameBorder="0" style="position: absolute; left: 0px; top: 0px; width: 100%; height: 100%;"></iframe>'))}) {
-  library(rcloud.web)
-  library(shiny)
-  library(htmltools)
+rcloud.shinyAppInternal <- function(app = getwd(), onStart = NULL, options = list(), renderer = function(url) { rcloud.web::rcw.result(body = paste0('<iframe src="', url, '" class="rcloud-shiny" frameBorder="0" style="position: absolute; left: 0px; top: 0px; width: 100%; height: 100%;"></iframe>'))}) {
   
   .socket <- .shinySocket()
 
@@ -140,9 +141,6 @@ rcloud.shinyAppInternal <- function(ui, server, onStart = NULL, options = list()
   exit.env$exit.callbacks.executed <- FALSE
   
   .registerRCloudShinyAppRunner(exit.env)
-  
-
-  app <- override.shinyApp(ui = ui, server = server, onStart = onStart, uiPattern = uiPattern)
   
   .socket$appHandlers <- shiny:::createAppHandlers(NULL, app$serverFuncSource)
   
@@ -202,9 +200,8 @@ sourceNotebookCell <- function(cell, envir = globalenv()) {
   eval(exprs, envir)
 }
 
-# Reads in RCloud notebook assets and spawns shiny app (if the assets contain server.R and ui.R)
-rcloud.runApp <- function(onStart = NULL, ...) {
-  ui.src <- list.notebook.files("ui.R")
+.runNotebook <- function(onStart = NULL, ...) {
+  ui.src <- list.notebook.files("ui.[r|R]")
   ui <- if (length(ui.src) == 0) {
     function(req) NULL
   } else {
@@ -216,7 +213,7 @@ rcloud.runApp <- function(onStart = NULL, ...) {
     }
     result
   }
-  server.src <- list.notebook.files("server.R")
+  server.src <- list.notebook.files("server.[r|R]")
   server <- if (length(server.src) == 0) {
     stop("server.R was not found among Notebook's assets.")
   } else {
@@ -231,23 +228,80 @@ rcloud.runApp <- function(onStart = NULL, ...) {
   
   global.src <- list.notebook.files("global.R")
   
-    # uiHandler <- function(req) {
-    #   uiHandlerSource()(req)
-    # }
-    # 
-    # wwwDir <- file.path.ci(appDir, "www")
-    # fallbackWWWDir <- system.file("www-dir", package = "shiny")
-    
-#    shinyOptions(appDir = appDir)
-    
-    localOnStart <- function() {
-      if (length(global.src) > 0)
-        sourceNotebookCell(global.src[[1]])
-      
-      if(!is.null(onStart)) {
-        onStart()
-      }
-    }
-    rcloud.shinyApp(ui, server, onStart = localOnStart, ...)
+  # uiHandler <- function(req) {
+  #   uiHandlerSource()(req)
+  # }
+  # 
+  # wwwDir <- file.path.ci(appDir, "www")
+  # fallbackWWWDir <- system.file("www-dir", package = "shiny")
   
+  #    shinyOptions(appDir = appDir)
+  
+  localOnStart <- function() {
+    if (length(global.src) > 0)
+      sourceNotebookCell(global.src[[1]])
+    
+    if(!is.null(onStart)) {
+      onStart()
+    }
+  }
+  app <- override.shinyApp(ui, server, onStart = localOnStart)
+  rcloud.shinyAppInternal(app, onStart = localOnStart, ...)
+}
+
+# Reads in RCloud notebook assets and spawns shiny app (if the assets contain server.R and ui.R)
+rcloud.runApp <- function(appDir = NULL, onStart = NULL, ...) {
+  library(rcloud.web)
+  library(shiny)
+  library(htmltools)
+
+  if(is.null(appDir)) {
+    .runNotebook(onStart = onStart, ...)
+  } else {
+    rcloud.shinyAppInternal(structure(list("dir" = appDir),
+                                      class = "rcloud.package.directory"))
+  }
+}
+
+#' @rdname shinyApp
+#' @export
+as.shiny.appobj.rcloud.package.directory <- function(x) {
+  if (identical(tolower(tools::file_ext(x$dir)), "r"))
+    override.shinyAppFile(x)
+  else
+    rcloud.shinyAppDir(x$dir)
+}
+
+#' @rdname shinyApp
+#' @param appDir Path to directory that contains a Shiny app (i.e. a server.R
+#'   file and either ui.R or www/index.html)
+#' @export
+rcloud.shinyAppDir <- function(appDir, options=list()) {
+  if (!utils::file_test('-d', appDir)) {
+    stop("No Shiny application exists at the path \"", appDir, "\"")
+  }
+  
+  # In case it's a relative path, convert to absolute (so we're not adversely
+  # affected by future changes to the path)
+  appDir <- normalizePath(appDir, mustWork = TRUE)
+  
+  if (shiny:::file.exists.ci(appDir, "server.R")) {
+    override.shinyAppDir_serverR(appDir, options = options)
+  } else if (shiny:::file.exists.ci(appDir, "app.R")) {
+    stop("Not supported")
+    shinyAppDir_appR("app.R", appDir, options = options)
+  } else {
+    stop("App dir must contain either app.R or server.R.")
+  }
+}
+
+#' @rdname shinyApp
+#' @param appFile Path to a .R file containing a Shiny application
+#' @export
+override.shinyAppFile <- function(appFile, options=list()) {
+  stop("Not supported")
+  appFile <- normalizePath(appFile, mustWork = TRUE)
+  appDir <- dirname(appFile)
+  
+  shinyAppDir_appR(basename(appFile), appDir, options = options)
 }
