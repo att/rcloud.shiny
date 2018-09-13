@@ -1,3 +1,6 @@
+## rcloud.shiny 0.6
+* aligns with Shiny 1.1.0 and uses a cleaner mechanism to override Shiny functionality for RCloud ([#32](https://github.com/att/rcloud.shiny/pull/32))
+
 ## rcloud.shiny 0.5.4
 * shiny cleanly shuts down and invokes hooks, so you can do `session$onSessionEnded(function() { ... })` now
 
