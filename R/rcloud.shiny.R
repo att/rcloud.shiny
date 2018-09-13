@@ -28,6 +28,7 @@ rcloud.shinyApp <- function(ui, server, onStart = NULL, options = list(), uiPatt
 rcloud.shinyAppInternal <- function(ui, server, onStart = NULL, options = list(), uiPattern = "/", renderer = function(url) { rcloud.web::rcw.result(body = paste0('<iframe src="', url, '" class="rcloud-shiny" frameBorder="0" style="position: absolute; left: 0px; top: 0px; width: 100%; height: 100%;"></iframe>'))}) {
   library(rcloud.web)
   library(shiny)
+  library(htmltools)
   
   appHandlers <- NULL
   onMessageHandler <- NULL
@@ -147,7 +148,6 @@ rcloud.shinyAppInternal <- function(ui, server, onStart = NULL, options = list()
     }
   }
   
-  
   host <- rcloud.get.conf.value('host')
   appInfo <- tryCatch( {
     do.call(override.runApp, c(list(app, host=nsl(host)), extraArgs))
@@ -173,7 +173,5 @@ rcloud.shinyAppInternal <- function(ui, server, onStart = NULL, options = list()
   serverFuncSource <- function() {
     server
   }
-  renderer(rcloud.proxy.url(appInfo$port, loc$search, loc$hash))
+  renderer(rcloud.proxy.url(shiny:::.globals$lastPort, loc$search, loc$hash))
 }
-
-

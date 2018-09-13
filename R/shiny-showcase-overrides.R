@@ -35,6 +35,12 @@ licenseLink <- function(licenseName) {
   }
 }
 
+# Expose file.path.ci as local function to reduce number of non-functional changes in this file
+file.path.ci <- function(...) {
+  shiny:::file.path.ci(...)
+} 
+
+
 # Returns tags containing showcase directives intended for the <HEAD> of the
 # document.
 showcaseHead <- function() {
@@ -86,10 +92,10 @@ appMetadata <- function(desc) {
   else ""
 }
 
-navTabsHelper <- function(files, prefix = "", active = c("app.r", "server.r")) {
+navTabsHelper <- function(files, prefix = "") {
   lapply(files, function(file) {
     with(tags,
-         li(class=if (tolower(file) %in% active) "active" else "",
+         li(class=if (tolower(file) %in% c("app.r", "server.r")) "active" else "",
             a(href=paste("#", gsub(".", "_", file, fixed=TRUE), "_code", sep=""),
               "data-toggle"="tab", paste0(prefix, file)))
     )
@@ -110,11 +116,11 @@ navTabsDropdown <- function(files) {
   }
 }
 
-tabContentHelper <- function(files, path, language, active = c("app.r", "server.r")) {
+tabContentHelper <- function(files, path, language) {
   lapply(files, function(file) {
     with(tags,
          div(class=paste("tab-pane",
-                         if (tolower(file) %in% active) " active"
+                         if (tolower(file) %in% c("app.r", "server.r")) " active"
                          else "",
                          sep=""),
              id=paste(gsub(".", "_", file, fixed=TRUE),
@@ -123,61 +129,18 @@ tabContentHelper <- function(files, path, language, active = c("app.r", "server.
                  # we need to prevent the indentation of <code> ... </code>
                  HTML(format(tags$code(
                    class=paste0("language-", language),
-                   paste(shiny:::readUTF8(file.path.ci(path, file)), collapse="\n")
+                   paste(readUTF8(file.path.ci(path, file)), collapse="\n")
                  ), indent = FALSE))))
     )
   })
-}
-
-tabContentHelperFromNotebookCells <- function(files, language, active = c("app.r", "server.r")) {
-  lapply(files, function(file) {
-    with(tags,
-         div(class=paste("tab-pane",
-                         if (tolower(file$filename) %in% active) " active"
-                         else "",
-                         sep=""),
-             id=paste(gsub(".", "_", file$filename, fixed=TRUE),
-                      "_code", sep=""),
-             pre(class="shiny-code",
-                 # we need to prevent the indentation of <code> ... </code>
-                 HTML(format(tags$code(
-                   class=paste0("language-", language),
-                   paste(file$content, collapse = "\n")
-                 ), indent = FALSE))))
-    )
-  })
-}
-
-navTabsHelperFromNotebookCells <- function(files, prefix = "", active = c("app.r", "server.r")) {
-  lapply(files, function(file) {
-    with(tags,
-         li(class=if (tolower(file$filename) %in% active) "active" else "",
-            a(href=paste("#", gsub(".", "_", file$filename, fixed=TRUE), "_code", sep=""),
-              "data-toggle"="tab", paste0(prefix, file$filename)))
-    )
-  })
-}
-
-# Get list of notebook cells
-list.notebook.files <- function(pattern) {
-  notebook_in_mini <- rcloud.support:::rcloud.session.notebook()
-  n <- notebook_in_mini$content
-  nn <- n$files
-  nn <- nn[grep(pattern, names(nn))]
-  invisible(nn)
 }
 
 # Returns tags containing the application's code in Bootstrap-style tabs in
 # showcase mode.
 showcaseCodeTabs <- function(codeLicense) {
-  rFiles <-  list.notebook.files(pattern = "^part.*\\.[rR]$")
-  if (length(rFiles) > 0) {
-    active <- tolower(names(rFiles)[1])
-  } else {
-    active <- c("app.r", "server.r")
-  }
+  rFiles <- list.files(pattern = "\\.[rR]$")
   wwwFiles <- list()
-  if (isTRUE(shiny:::.globals$IncludeWWW)) {
+  if (isTRUE(.globals$IncludeWWW)) {
     path <- file.path(getwd(), "www")
     wwwFiles$jsFiles <- list.files(path, pattern = "\\.js$")
     wwwFiles$cssFiles <- list.files(path, pattern = "\\.css$")
@@ -190,27 +153,23 @@ showcaseCodeTabs <- function(codeLicense) {
                    icon("level-up"),
                    "show with app"),
                  ul(class="nav nav-tabs",
-                    navTabsHelperFromNotebookCells(rFiles, active = active),
+                    navTabsHelper(rFiles),
                     navTabsDropdown(unlist(wwwFiles))
                  ),
                  div(class="tab-content", id="showcase-code-content",
-                     tabContentHelperFromNotebookCells(rFiles, language = "r", active = active),
+                     tabContentHelper(rFiles, path = getwd(), language = "r"),
                      tabContentHelper(wwwFiles$jsFiles,
                                       path = paste0(getwd(), "/www"),
-                                      language = "javascript", active = active),
+                                      language = "javascript"),
                      tabContentHelper(wwwFiles$cssFiles,
                                       path = paste0(getwd(), "/www"),
-                                      language = "css", active = active),
+                                      language = "css"),
                      tabContentHelper(wwwFiles$htmlFiles,
                                       path = paste0(getwd(), "/www"),
-                                      language = "xml", active = active)
+                                      language = "xml")
                  ),
                  codeLicense))
 }
-
-file.path.ci <- function(...) {
-  shiny:::file.path.ci(...)
-} 
 
 # Returns tags containing the showcase application information (readme and
 # code).
@@ -235,7 +194,7 @@ showcaseAppInfo <- function() {
                } else "",
                div(id="showcase-code-inline",
                    class=if (hasReadme || hasDesc) "col-sm-8" else "col-sm-10 col-sm-offset-1",
-                   showcaseCodeTabs(
+                   getOption('shiny.showcase.codeTabs', showcaseCodeTabs)(
                      if (hasDesc && "License" %in% colnames(desc)) {
                        small(class="showcase-code-license text-muted",
                              "Code license: ",
@@ -258,8 +217,9 @@ showcaseBody <- function(htmlBody) {
 
 # Sets the defaults for showcase mode (for app boot).
 setShowcaseDefault <- function(showcaseDefault) {
-  shiny:::.globals$showcaseDefault <- showcaseDefault
-  shiny:::.globals$showcaseOverride <- as.logical(showcaseDefault)
+  localGlobals <- shiny:::.globals
+  localGlobals$showcaseDefault <- showcaseDefault
+  localGlobals$showcaseOverride <- as.logical(showcaseDefault)
 }
 
 
@@ -277,3 +237,4 @@ showcaseUI <- function(ui) {
     showcaseBody(ui)
   )
 }
+
