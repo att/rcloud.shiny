@@ -27,6 +27,25 @@ var deps = [
 ];
 
 function start_require(deps) {
+    requirejs.onError = function (err) {
+        if (err.requireType === 'timeout') {
+            var        lines = err.toString().split('\n');
+            lines = lines.slice(0, lines.length-1); // don't include link to confusing requirejs docs
+            if(window.RCloud)
+                RCloud.UI.fatal_dialog(["Sorry, the page timed out."].concat(lines).join('\n'), "Reload", window.location.href);
+            else {
+                lines.unshift('Ooops, please reload');
+                var main = document.getElementById('main-div');
+                main.innerHTML = '<pre>' + lines.join('\n') + '</pre>';
+            }
+        } else {
+            throw err;
+        }
+    };
+
+    window.RCloud = {};
+    window.RCloud.UI = {};
+    window.RCloud.UI.addons = {};
     require(deps,
         function(Promise, _, d3) {
             window.Promise = Promise;
