@@ -4,7 +4,11 @@ rcloud.proxy.url <- function(port, search, hash) {
 }
 
 rcloud.shinyApp <- function(ui, server, onStart = NULL, options = list(), uiPattern = "/") {
-  rcloud.shinyAppInternal(ui, server, onStart = onStart, options = options, uiPattern = uiPattern)
+  library(rcloud.web)
+  library(shiny)
+  library(htmltools)
+  app <- override.shinyApp(ui = ui, server = server, onStart = onStart, uiPattern = uiPattern)
+  rcloud.shinyAppInternal(app, onStart = onStart, options = options)
 }
 
 .debug.msg <- function(msg = "", debug.enabled = .isDebugEnabled(), debug.file = .getLogFile()) {
@@ -25,14 +29,14 @@ rcloud.shinyApp <- function(ui, server, onStart = NULL, options = list(), uiPatt
   file.path(rcloud.support:::pathConf("tmp.dir"), "rcloud.shiny.log")
 }
 
-rcloud.shinyAppInternal <- function(ui, server, onStart = NULL, options = list(), uiPattern = "/", renderer = function(url) { rcloud.web::rcw.result(body = paste0('<iframe src="', url, '" class="rcloud-shiny" frameBorder="0" style="position: absolute; left: 0px; top: 0px; width: 100%; height: 100%;"></iframe>'))}) {
-  library(rcloud.web)
-  library(shiny)
-  library(htmltools)
-  
-  appHandlers <- NULL
-  onMessageHandler <- NULL
-  onCloseHandler <- NULL
+.socket <- new.env() 
+
+.shinySocket <- function() {
+  .socket <- rcloud.shiny:::.socket
+  .socket$appHandlers <- NULL
+  .socket$onMessageHandler <- NULL
+  .socket$onCloseHandler <- NULL
+  .socket$fws <- NULL
   
   fakeWebSocket <- function(id) {
     list(
@@ -40,10 +44,10 @@ rcloud.shinyAppInternal <- function(ui, server, onStart = NULL, options = list()
         rcloud.shiny.caps$on_message(id, msg);
       },
       onMessage = function(h) {
-        onMessageHandler <<- h
+        .socket$onMessageHandler <- h
       },
       onClose = function(h) {
-        onCloseHandler <<- h
+        .socket$onCloseHandler <- h
       }, 
       close = function() {
         parentEnv <- parent.frame(2)
@@ -58,81 +62,87 @@ rcloud.shinyAppInternal <- function(ui, server, onStart = NULL, options = list()
           warning(paste("Failed to notify frontent about closed socket: " , e, "\n"))
         })
         
-        tryCatch(onCloseHandler(), error = function(e) {
+        tryCatch(.socket$onCloseHandler(), error = function(e) {
           warning(paste("Failed to execute socket onCloseHandler: " , e, "\n"))
         })
       });
   }
   
-  fws <- NULL
-
-  connect <- function(id) {
+  .socket$connect <- function(id) {
     rcloud.shiny.debugMsg("Shiny connected")
-    fws <<- fakeWebSocket(id)
-    appHandlers$ws(fws)
+    .socket$fws <- fakeWebSocket(id)
+    .socket$appHandlers$ws(.socket$fws)
   }
-
-  receive <- function(id, msg) {
+  
+  .socket$receive <- function(id, msg) {
     rcloud.shiny.debugMsg(paste("Shiny message", msg))
-    onMessageHandler(FALSE, msg)
+    .socket$onMessageHandler(FALSE, msg)
   }
+  .socket
+}
 
-  ocaps <- list(
-    connect = rcloud.support:::make.oc(connect),
-    send = rcloud.support:::make.oc(receive)
-  )
-
-
-  executeExitCallbacks <- function(exit.env) {
-    
-    .debug.msg("Running shiny shutdown callbacks")
-    
-    if(!is.null(fws)) {
-      tryCatch(fws$close(), error = function(e) {
-        errMsg <- paste("Failed to close shiny socket:", as.character(e))
-        warning(errMsg)
-        if (exit.env$debug.enabled) {
-          .debug.msg(errMsg)
-          .debug.msg(traceback())
-        }
-      })
-    }
-    
-    if( exit.env$exit.callbacks.executed ) {
-      warning("Shiny app exit callbacks already executed, skipping")
-      return(exit.env$exit.callbacks.executed)
-    }
-    
-    .debug.msg(paste0("Number of callback functions: ", length(exit.env$exit.callbacks)))
-    
-    lapply(exit.env$exit.callbacks, function(callback) {
-      tryCatch(callback(), error = function(e) {
-        errMsg <- paste("Failed to execute shiny exit callback: " , as.character(e), "\n")
-        warning(errMsg)
+.executeExitCallbacks <- function(exit.env) {
+  
+  .debug.msg("Running shiny shutdown callbacks")
+  
+  if(!is.null(.socket$fws)) {
+    tryCatch(.socket$fws$close(), error = function(e) {
+      errMsg <- paste("Failed to close shiny socket:", as.character(e))
+      warning(errMsg)
+      if (exit.env$debug.enabled) {
         .debug.msg(errMsg)
-      })
+        .debug.msg(traceback())
+      }
     })
-    
-    .debug.msg("Processing shiny shutdown callbacks completed.")
-    
-    exit.env$exit.callbacks.executed <- TRUE
   }
   
-  exit.env <- new.env()
-  exit.env$exit.callbacks <- c()
-  exit.env$exit.callbacks.executed <- FALSE
+  if( exit.env$exit.callbacks.executed ) {
+    warning("Shiny app exit callbacks already executed, skipping")
+    return(exit.env$exit.callbacks.executed)
+  }
   
+  .debug.msg(paste0("Number of callback functions: ", length(exit.env$exit.callbacks)))
+  
+  lapply(exit.env$exit.callbacks, function(callback) {
+    tryCatch(callback(), error = function(e) {
+      errMsg <- paste("Failed to execute shiny exit callback: " , as.character(e), "\n")
+      warning(errMsg)
+      .debug.msg(errMsg)
+    })
+  })
+  
+  .debug.msg("Processing shiny shutdown callbacks completed.")
+  
+  exit.env$exit.callbacks.executed <- TRUE
+}
+
+.registerRCloudShinyAppRunner <- function(exit.env) {
   .GlobalEnv$.ocap.idle <- function() {
     shiny:::serviceApp()
     if (isTRUE(shiny:::.globals$stopped)) {
-      tryCatch(executeExitCallbacks(exit.env), error=function(e) {
+      tryCatch(.executeExitCallbacks(exit.env), error=function(e) {
         .debug.msg(paste("Error when shutting down shiny:", as.character(e)))
       })
     }
   }
+}
+
+rcloud.shinyAppInternal <- function(app = getwd(), onStart = NULL, options = list(), renderer = function(url) { rcloud.web::rcw.result(body = paste0('<iframe src="', url, '" class="rcloud-shiny" frameBorder="0" style="position: absolute; left: 0px; top: 0px; width: 100%; height: 100%;"></iframe>'))}) {
   
-  appHandlers <- shiny:::createAppHandlers(NULL, serverFuncSource)
-  app <- override.shinyApp(ui = ui, server = server, onStart = onStart, uiPattern = uiPattern)
+  .socket <- .shinySocket()
+
+  ocaps <- list(
+    connect = rcloud.support:::make.oc(.socket$connect),
+    send = rcloud.support:::make.oc(.socket$receive)
+  )
+
+  exit.env <- new.env()
+  exit.env$exit.callbacks <- c()
+  exit.env$exit.callbacks.executed <- FALSE
+  
+  .registerRCloudShinyAppRunner(exit.env)
+  
+  .socket$appHandlers <- shiny:::createAppHandlers(NULL, app$serverFuncSource)
   
   extraArgNames <- names(as.list(args(override.runApp)))
   extraArgNames <- extraArgNames[which(nchar(extraArgNames) > 0)]
@@ -156,13 +166,13 @@ rcloud.shinyAppInternal <- function(ui, server, onStart = NULL, options = list()
   
   
   if (inherits(appInfo, "shiny-startup-error")) {
-    executeExitCallbacks(exit.env)
+    .executeExitCallbacks(exit.env)
     stop(paste0("Failed to startup shiny application. ", appInfo$error))
   } else {
     f <- .GlobalEnv$.Rserve.done
     session <- rcloud.support:::.session
     .GlobalEnv$.Rserve.done <- function(...) {
-      executeExitCallbacks(exit.env)
+      .executeExitCallbacks(exit.env)
       if (is.function(f)) {
         f(...)
       }
@@ -170,8 +180,128 @@ rcloud.shinyAppInternal <- function(ui, server, onStart = NULL, options = list()
   }
   
   loc <- rcloud.shiny.caps$init(ocaps);
-  serverFuncSource <- function() {
-    server
-  }
+  
   renderer(rcloud.proxy.url(shiny:::.globals$lastPort, loc$search, loc$hash))
+}
+
+
+# based on sourceUTF from shiny
+sourceNotebookCell <- function(cell, envir = globalenv()) {
+  enc <- if (any(Encoding(cell$content) == 'UTF-8')) 'UTF-8' else 'unknown'
+  src <- srcfilecopy(cell$filename, cell$content, isFile = FALSE)  # source reference info
+  exprs <- try(parse(text = cell$content, keep.source = FALSE, srcfile = src, encoding = enc))
+  # Wrap the exprs in first `{`, then ..stacktraceon..(). It's only really the
+  # ..stacktraceon..() that we care about, but the `{` is needed to make that
+  # possible.
+  exprs <- shiny:::makeCall(`{`, exprs)
+  # Need to wrap exprs in a list because we want it treated as a single argument
+  exprs <- shiny:::makeCall(shiny:::..stacktraceon.., list(exprs))
+  
+  eval(exprs, envir)
+}
+
+.runNotebook <- function(onStart = NULL, ...) {
+  ui.src <- list.notebook.files("ui.[r|R]")
+  ui <- if (length(ui.src) == 0) {
+    function(req) NULL
+  } else {
+    localGlobals <- shiny:::.globals
+    localGlobals$ui <- NULL
+    result <- sourceNotebookCell(ui.src[[1]], envir = new.env(parent = globalenv()))
+    if (!is.null(localGlobals$ui)) {
+      result <- localGlobals$ui[[1]]
+    }
+    result
+  }
+  server.src <- list.notebook.files("server.[r|R]")
+  server <- if (length(server.src) == 0) {
+    stop("server.R was not found among Notebook's assets.")
+  } else {
+    localGlobals <- shiny:::.globals
+    localGlobals$server <- NULL
+    result <- sourceNotebookCell(server.src[[1]], envir = new.env(parent = globalenv()))
+    if (!is.null(localGlobals$server)) {
+      result <- localGlobals$server[[1]]
+    }
+    result
+  }
+  
+  global.src <- list.notebook.files("global.R")
+  
+  # uiHandler <- function(req) {
+  #   uiHandlerSource()(req)
+  # }
+  # 
+  # wwwDir <- file.path.ci(appDir, "www")
+  # fallbackWWWDir <- system.file("www-dir", package = "shiny")
+  
+  #    shinyOptions(appDir = appDir)
+  
+  localOnStart <- function() {
+    if (length(global.src) > 0)
+      sourceNotebookCell(global.src[[1]])
+    
+    if(!is.null(onStart)) {
+      onStart()
+    }
+  }
+  app <- override.shinyApp(ui, server, onStart = localOnStart)
+  rcloud.shinyAppInternal(app, onStart = localOnStart, ...)
+}
+
+# Reads in RCloud notebook assets and spawns shiny app (if the assets contain server.R and ui.R)
+rcloud.runApp <- function(appDir = NULL, onStart = NULL, ...) {
+  library(rcloud.web)
+  library(shiny)
+  library(htmltools)
+
+  if(is.null(appDir)) {
+    .runNotebook(onStart = onStart, ...)
+  } else {
+    rcloud.shinyAppInternal(structure(list("dir" = appDir),
+                                      class = "rcloud.package.directory"))
+  }
+}
+
+#' @rdname shinyApp
+#' @export
+as.shiny.appobj.rcloud.package.directory <- function(x) {
+  if (identical(tolower(tools::file_ext(x$dir)), "r"))
+    override.shinyAppFile(x)
+  else
+    rcloud.shinyAppDir(x$dir)
+}
+
+#' @rdname shinyApp
+#' @param appDir Path to directory that contains a Shiny app (i.e. a server.R
+#'   file and either ui.R or www/index.html)
+#' @export
+rcloud.shinyAppDir <- function(appDir, options=list()) {
+  if (!utils::file_test('-d', appDir)) {
+    stop("No Shiny application exists at the path \"", appDir, "\"")
+  }
+  
+  # In case it's a relative path, convert to absolute (so we're not adversely
+  # affected by future changes to the path)
+  appDir <- normalizePath(appDir, mustWork = TRUE)
+  
+  if (shiny:::file.exists.ci(appDir, "server.R")) {
+    override.shinyAppDir_serverR(appDir, options = options)
+  } else if (shiny:::file.exists.ci(appDir, "app.R")) {
+    stop("Not supported")
+    shinyAppDir_appR("app.R", appDir, options = options)
+  } else {
+    stop("App dir must contain either app.R or server.R.")
+  }
+}
+
+#' @rdname shinyApp
+#' @param appFile Path to a .R file containing a Shiny application
+#' @export
+override.shinyAppFile <- function(appFile, options=list()) {
+  stop("Not supported")
+  appFile <- normalizePath(appFile, mustWork = TRUE)
+  appDir <- dirname(appFile)
+  
+  shinyAppDir_appR(basename(appFile), appDir, options = options)
 }
